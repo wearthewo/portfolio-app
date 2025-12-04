@@ -1,0 +1,110 @@
+package com.enterprise.portfolio.service;
+
+import io.micrometer.core.instrument.Counter;
+import io.micrometer.core.instrument.MeterRegistry;
+import io.micrometer.core.instrument.Timer;
+import org.springframework.stereotype.Service;
+
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.atomic.AtomicInteger;
+
+@Service
+public class MetricsService {
+
+    private final MeterRegistry meterRegistry;
+    private final ConcurrentHashMap<String, Counter> counters = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, Timer> timers = new ConcurrentHashMap<>();
+    private final ConcurrentHashMap<String, AtomicInteger> gauges = new ConcurrentHashMap<>();
+
+    public MetricsService(MeterRegistry meterRegistry) {
+        this.meterRegistry = meterRegistry;
+    }
+
+    /**
+     * Increment a counter with the given name and tags
+     */
+    public void incrementCounter(String name, String... tags) {
+        String key = name + String.join("_", tags);
+        counters.computeIfAbsent(key, k -> 
+            Counter.builder(name)
+                .tags(tags)
+                .register(meterRegistry)
+        ).increment();
+    }
+
+    /**
+     * Record the time taken for an operation
+     */
+    public void recordTime(String name, long time, TimeUnit unit, String... tags) {
+        String key = name + String.join("_", tags);
+        timers.computeIfAbsent(key, k ->
+            Timer.builder(name)
+                .tags(tags)
+                .publishPercentiles(0.5, 0.95, 0.99) // median, 95th percentile, 99th percentile
+                .publishPercentileHistogram()
+                .register(meterRegistry)
+        ).record(time, unit);
+    }
+
+    /**
+     * Set a gauge value
+     */
+    public void setGauge(String name, int value, String... tags) {
+        String key = name + String.join("_", tags);
+        gauges.computeIfAbsent(key, k ->
+            meterRegistry.gauge(name + ".gauge", tags, new AtomicInteger(0))
+        ).set(value);
+    }
+
+    /**
+     * Get the current value of a counter
+     */
+    public double getCounterValue(String name, String... tags) {
+        String key = name + String.join("_", tags);
+        Counter counter = counters.get(key);
+        return counter != null ? counter.count() : 0.0;
+    }
+
+    /**
+     * Get the mean time for a timer
+     */
+    public double getMeanTime(String name, String... tags) {
+        String key = name + String.join("_", tags);
+        Timer timer = timers.get(key);
+        return timer != null ? timer.mean(TimeUnit.MILLISECONDS) : 0.0;
+    }
+
+    /**
+     * Get the current value of a gauge
+     */
+    public int getGaugeValue(String name, String... tags) {
+        String key = name + String.join("_", tags);
+        AtomicInteger gauge = gauges.get(key);
+        return gauge != null ? gauge.get() : 0;
+    }
+
+    /**
+     * Create a timer and return a sample to be stopped when the operation completes
+     */
+    public Timer.Sample startTimer() {
+        return Timer.start(meterRegistry);
+    }
+
+    /**
+     * Stop a timer and record the duration
+     */
+    public void stopTimer(Timer.Sample sample, String name, String... tags) {
+        if (sample != null) {
+            String key = name + String.join("_", tags);
+            Timer timer = timers.computeIfAbsent(key, k ->
+                Timer.builder(name)
+                    .tags(tags)
+                    .publishPercentiles(0.5, 0.95, 0.99)
+                    .publishPercentileHistogram()
+                    .register(meterRegistry)
+            );
+            sample.stop(timer);
+        }
+    }
+}
