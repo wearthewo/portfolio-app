@@ -1,13 +1,14 @@
 package com.enterprise.portfolio.service;
 
-import io.micrometer.core.instrument.Counter;
-import io.micrometer.core.instrument.MeterRegistry;
-import io.micrometer.core.instrument.Timer;
+import io.micrometer.core.instrument.*;
 import org.springframework.stereotype.Service;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.function.ToDoubleFunction;
 
 @Service
 public class MetricsService {
@@ -50,11 +51,46 @@ public class MetricsService {
     /**
      * Set a gauge value
      */
+    /**
+     * Set a gauge value with the given name, value, and tags
+     * @param name The name of the gauge
+     * @param value The value to set
+     * @param tags Key-value pairs of tags (must be even number of arguments)
+     */
     public void setGauge(String name, int value, String... tags) {
+        if (tags.length % 2 != 0) {
+            throw new IllegalArgumentException("Tags must be provided as key-value pairs");
+        }
+        
         String key = name + String.join("_", tags);
-        gauges.computeIfAbsent(key, k ->
-            meterRegistry.gauge(name + ".gauge", tags, new AtomicInteger(0))
-        ).set(value);
+        
+        // Get or create the gauge
+        AtomicInteger gaugeValue = gauges.computeIfAbsent(key, k -> {
+            // Create tags list
+            List<Tag> tagList = new ArrayList<>();
+            for (int i = 0; i < tags.length; i += 2) {
+                tagList.add(Tag.of(tags[i], tags[i + 1]));
+            }
+            
+            // Create a new AtomicInteger to hold the gauge value
+            AtomicInteger atomicInt = new AtomicInteger(0);
+            
+            // Register the gauge
+            Gauge.builder(name, atomicInt, new ToDoubleFunction<AtomicInteger>() {
+                @Override
+                public double applyAsDouble(AtomicInteger value) {
+                    return value.doubleValue();
+                }
+            })
+            .tags(tagList)
+            .description(name + " gauge")
+            .register(meterRegistry);
+            
+            return atomicInt;
+        });
+        
+        // Update the gauge value
+        gaugeValue.set(value);
     }
 
     /**

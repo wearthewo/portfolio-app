@@ -105,7 +105,7 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
         
         String requestBody = "";
         if (request.getContentLength() > 0) {
-            requestBody = IOUtils.toString(request.getContentAsByteArray(), StandardCharsets.UTF_8);
+            requestBody = new String(request.getContentAsByteArray(), StandardCharsets.UTF_8);
         }
         
         log.debug("\n=== Request [{}] ===\n{} {} {}\n{}\n{}",
@@ -120,7 +120,7 @@ public class RequestResponseLoggingFilter extends OncePerRequestFilter {
     private void logResponse(ContentCachingResponseWrapper response, String requestId, long duration) throws IOException {
         String responseBody = "";
         if (response.getContentSize() > 0) {
-            responseBody = IOUtils.toString(response.getContentAsByteArray(), StandardCharsets.UTF_8);
+            responseBody = new String(response.getContentAsByteArray(), StandardCharsets.UTF_8);
             // Reset response content after reading
             response.copyBodyToResponse();
         }

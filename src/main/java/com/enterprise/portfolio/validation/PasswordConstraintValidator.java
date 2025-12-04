@@ -64,7 +64,8 @@ public class PasswordConstraintValidator implements ConstraintValidator<ValidPas
         rules.add(new IllegalSequenceRule(EnglishSequenceData.USQwerty, 5, false));
         
         // No repeated characters
-        rules.add(new RepeatCharacterRule(3));
+        rules.add(new CharacterRule(EnglishCharacterData.Alphabetical, 1));
+        rules.add(new CharacterRule(EnglishCharacterData.Digit, 1));
         
         // Create validator and validate password
         PasswordValidator validator = new PasswordValidator(rules);
