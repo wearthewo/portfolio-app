@@ -2,6 +2,7 @@ package com.enterprise.portfolio.service.impl;
 
 import com.enterprise.portfolio.dto.RoleDto;
 import com.enterprise.portfolio.exception.ResourceAlreadyExistsException;
+import com.enterprise.portfolio.exception.ResourceNotFoundException;
 import com.enterprise.portfolio.model.Role;
 import com.enterprise.portfolio.repository.RoleRepository;
 import com.enterprise.portfolio.repository.UserRepository;
