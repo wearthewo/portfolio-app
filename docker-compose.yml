@@ -19,7 +19,7 @@ services:
 
   mysql:
     image: mysql:8.0
-    container_name: ${COMPOSE_PROJECT_NAME:-portfolio}-mysql
+    container_name: portfolio-mysql
     restart: unless-stopped
     environment:
       MYSQL_DATABASE: ${MYSQL_DATABASE}
@@ -33,7 +33,7 @@ services:
 
   nginx:
     image: nginx:alpine
-    container_name: ${COMPOSE_PROJECT_NAME:-portfolio}-nginx
+    container_name: portfolio-nginx
     restart: unless-stopped
     ports:
       - "80:80"
